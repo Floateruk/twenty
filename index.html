@@ -182,7 +182,7 @@ function pushSoon(){if(!syncRef)return;clearTimeout(pushTimer);pushTimer=setTime
 function mergeRemote(r){if(!r)return false;var changed=false;
   (r.days||[]).forEach(function(d){if(st.days.indexOf(d)<0){st.days.push(d);changed=true}});
   var rc=r.courses||{};
-  COURSES.forEach(function(c){var L=store.courses[c.id],R=rc[c.id];if(!R)return;
+  COURSES.forEach(function(c){var L=store.courses[c.id],R=rc[c.id];if(!R)return;if((R.reset||0)>(L.reset||0)){store.courses[c.id]=L={done:R.done||{},wrong:R.wrong||{},reset:R.reset};changed=true;return}if((L.reset||0)>(R.reset||0))return;
     for(var k in (R.done||{})){var a=L.done[k],b=R.done[k];if(!a||(b.d||"")>(a.d||"")||((b.d||"")===(a.d||"")&&b.s>a.s)){L.done[k]=b;changed=true}}
     if((r.t||0)>(st.t||0)){if(JSON.stringify(L.wrong)!==JSON.stringify(R.wrong||{})){L.wrong=R.wrong||{};changed=true}}});
   if((r.t||0)>(st.t||0)){st.t=r.t;if(r.last&&st.last!==r.last){st.last=r.last;changed=true}}
@@ -268,6 +268,13 @@ function render(){var m=$("main");m.textContent="";
 /* ---------- library ---------- */
 function stat(b,s){return h("div",{class:"stat"},[h("b",{text:b}),h("span",{text:s})])}
 function pbar(n,t,label){return h("div",{class:"bar",role:"progressbar","aria-valuemin":"0","aria-valuemax":String(t),"aria-valuenow":String(n),"aria-label":label},[h("i",{style:"width:"+(t?n/t*100:0)+"%"})])}
+
+function libOrder(){return COURSES.slice().sort(function(a,b){function g(c){if(c.pin)return 0;var d=cdone(c);return d>0&&cnext(c)>=0?1:2}
+  return (g(a)-g(b))||a.title.toLowerCase().localeCompare(b.title.toLowerCase())})}
+function resetBtn(c,cls){var armed=false;var b=h("button",{class:"btn "+(cls||""),text:"Start again"});
+  b.addEventListener("click",function(){if(!armed){armed=true;b.textContent="Tap again to clear this course’s progress";b.classList.add("primary");return}
+    store.courses[c.id]={done:{},wrong:{},reset:Date.now()};if(C&&C.id===c.id){st.done=store.courses[c.id].done;st.wrong=store.courses[c.id].wrong}save();render()});
+  b.addEventListener("blur",function(){if(armed){armed=false;b.textContent="Start again";b.classList.remove("primary")}});return b}
 function renderLibrary(m){
   var tot=0,dn=0;COURSES.forEach(function(c){tot+=c.sess.length;dn+=cdone(c)});
   m.appendChild(h("section",{class:"hero"},[h("div",{class:"eyebrow",text:"Your study library"}),h("h1",{text:"Twenty minutes a day"}),
@@ -281,12 +288,12 @@ function renderLibrary(m){
         h("span",{class:"note",text:"About 20 minutes"})])]);
     m.appendChild(c)}
   var g=h("div",{class:"grid"});
-  COURSES.forEach(function(c){var d=cdone(c),n=cnext(c);
+  libOrder().forEach(function(c){var d=cdone(c),n=cnext(c);
     var card=h("section",{class:"card course"},[h("div",{class:"eyebrow",text:c.kind}),h("h2",{text:c.title}),h("p",{class:"sub",text:c.sub}),
       pbar(d,c.sess.length,c.title+" progress"),
       h("div",{class:"note",text:d+" of "+c.sess.length+" sessions done"+(n<0?" · complete":"")}),
       h("div",{class:"row"},[h("button",{class:"btn primary",text:d===0?"Start course":(n<0?"Revisit":"Continue"),onclick:function(){go("course",c.id)}}),
-        h("button",{class:"btn",text:"Course map",onclick:function(){go("course",c.id)}})])]);
+        h("button",{class:"btn",text:"Course map",onclick:function(){go("course",c.id)}})].concat(n<0?[resetBtn(c,"ghost")]:[]))]);
     g.appendChild(card)});
   g.appendChild(h("section",{class:"card empty"},[h("h3",{text:"Next study text"}),h("p",{text:"Send over the next manual or notes and it will be added here as a new course, in the same format."})]));
   m.appendChild(g);
@@ -298,7 +305,7 @@ function renderCourse(m){
   m.appendChild(h("div",{class:"stats"},[stat(String(streak()),"day streak"),stat(dc+"/"+SESS.length,"sessions done"),stat(Math.round(dc/SESS.length*100)+"%","of this course")]));
   var c=h("section",{class:"card today"});
   if(n<0){c.appendChild(h("div",{class:"eyebrow",text:"Complete"}));c.appendChild(h("h2",{text:"You have been through the whole course"}));
-    c.appendChild(h("p",{text:"Revisit any session below. Warm-ups will keep bringing back the questions you missed."}));
+    c.appendChild(h("p",{text:"Revisit any session below, or start the whole course again from session 1."}));c.appendChild(h("div",{class:"row"},[resetBtn(C)]));
   }else{var s=SESS[n];
     c.appendChild(h("div",{class:"eyebrow",text:(didToday?"Next up":"Today")+" · Session "+(n+1)+" of "+SESS.length+" · "+C.unit+" "+s.ch}));
     c.appendChild(h("h2",{text:s.title}));c.appendChild(h("p",{text:s.hook}));
