@@ -123,6 +123,31 @@ input[type=search]{width:100%;min-height:46px;border:1px solid var(--line);backg
 
 .fig{margin:4px 0;max-width:65ch}.fig img{display:block;max-width:100%;height:auto;border:1px solid var(--line);border-radius:10px;background:#fff}.fig figcaption{font-size:.9rem;color:var(--muted);margin-top:6px;font-family:var(--f-ui,inherit)}
 
+
+.lx{display:flex;flex-direction:column;gap:16px}
+.lx .card h3{margin:0 0 6px}
+.lx .ctl{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.dl{display:flex;flex-direction:column;gap:10px;border-top:1px solid var(--line);padding-top:12px;margin-top:12px}
+.dl:first-of-type{border-top:0;padding-top:0}
+.dl textarea{font:inherit;font-size:1.05rem;width:100%;box-sizing:border-box;min-height:2.8em;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--fg);resize:vertical}
+.dres{font-family:var(--f-read);font-size:1.08rem;line-height:1.7}
+.dres .ok{color:var(--good);font-weight:600}
+.dres .no{color:var(--bad);text-decoration:underline wavy;text-underline-offset:4px;font-weight:600}
+.dres .ex{color:var(--muted);text-decoration:line-through}
+.dres .en{color:var(--muted);font-size:.95rem}
+.pv{display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--line);border-radius:12px;overflow:hidden;font-family:var(--f-read);font-size:1.05rem;line-height:1.5}
+.pv>div{padding:9px 12px;border-top:1px solid var(--line)}
+.pv>div:nth-child(-n+2){border-top:0}
+.pv .hd{font-family:var(--f-ui);font-weight:700;font-size:.85rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);background:var(--hl)}
+.pv .de{cursor:pointer;border-right:1px solid var(--line)}
+.pv .de:hover,.pv .de.now{background:var(--hl)}
+.pv.hide-en .enc,.pv.hide-de .de{color:transparent;text-shadow:0 0 9px var(--muted);user-select:none}
+.pv .add{display:block;font-family:var(--f-ui);font-size:.75rem;color:var(--muted)}
+.vw{display:grid;gap:8px}
+.vw button.btn{padding:4px 10px;min-height:0}
+.fl{font-family:var(--f-read);font-size:1.1rem;line-height:1.7}
+.fl span.now{background:var(--hl);border-radius:4px}
+@media (max-width:420px){.pv{font-size:.95rem}.pv>div{padding:8px}}
 </style>
 
 <div class="top"><div class="wrap" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;width:100%">
@@ -237,7 +262,7 @@ function setNav(){var n=$("nav");n.textContent="";var items=[["home","Library"]]
     var b=h("button",{text:p[1],onclick:function(){go(p[0])}});if(cur)b.setAttribute("aria-current","page");n.appendChild(b)})}
 function go(v,id){leaveSession();if(id)setCourse(id);if(v==="course"&&!C)v="home";view=v;
   try{history.replaceState(null,"","#"+(v==="course"?"c-"+C.id:v))}catch(e){}setNav();render();window.scrollTo(0,0)}
-function leaveSession(){ttsStop(false);showBar(null);if(timerId){clearInterval(timerId);timerId=null}sess=null}
+function leaveSession(){if(typeof lstop==="function")lstop();ttsStop(false);showBar(null);if(timerId){clearInterval(timerId);timerId=null}sess=null}
 function render(){var m=$("main");m.textContent="";
   if(view==="home")renderLibrary(m);else if(view==="course")renderCourse(m);else if(view==="gloss")renderGloss(m);else if(view==="session")renderSession(m)}
 /* ---------- library ---------- */
@@ -319,13 +344,13 @@ var STEPS=[["Warm-up","2 min"],["Lesson","10 min"],["Quiz","5 min"],["Wrap-up","
 function renderSession(m){var s=SESS[sess.i];ttsStop(false);showBar(null);
   var head=h("div",{class:"shead"},[h("div",{class:"row"},[h("button",{class:"btn ghost",text:"← Leave",onclick:function(){go("course")}}),h("span",{class:"eyebrow",text:"Session "+(s.i+1)+" of "+SESS.length+" · "+C.unit+" "+s.ch+": "+chn(s.ch)}),
     h("span",{class:"timer note",id:"timer",style:"margin-left:auto",text:fmt(Math.round(1200-sess.el))+" left"})]),
-    h("h1",{text:s.title}),h("div",{class:"note",text:s.ref+" · Syllabus "+s.lo})]);
+    h("h1",{text:s.title}),h("div",{class:"note",text:s.ref+(s.kind==="listen"?" · ":" · Syllabus ")+s.lo})]);
   m.appendChild(head);
-  var steps=h("div",{class:"steps",role:"tablist"});STEPS.forEach(function(p,k){steps.appendChild(h("button",{class:(sess.step===k?"on":"")+(k<sess.step?" done":""),role:"tab","aria-selected":sess.step===k?"true":"false",
+  var steps=h("div",{class:"steps",role:"tablist"});(s.kind==="listen"?LSTEPS:STEPS).forEach(function(p,k){steps.appendChild(h("button",{class:(sess.step===k?"on":"")+(k<sess.step?" done":""),role:"tab","aria-selected":sess.step===k?"true":"false",
     onclick:function(){sess.step=k;render();window.scrollTo(0,0)}},[p[0],h("small",{text:p[1]})]))});
   m.appendChild(steps);
   var body=h("div",{style:"display:flex;flex-direction:column;gap:16px"});m.appendChild(body);
-  if(sess.step===0)stepWarm(body,s);else if(sess.step===1)stepLesson(body,s);else if(sess.step===2)stepQuiz(body,s);else stepWrap(body,s)}
+  if(sess.step===1&&s.kind==="listen")stepListen(body,s);else if(sess.step===0)stepWarm(body,s);else if(sess.step===1)stepLesson(body,s);else if(sess.step===2)stepQuiz(body,s);else stepWrap(body,s)}
 function nav2(body,back,fwd,fl){var r=h("div",{class:"row",style:"justify-content:space-between"});
   r.appendChild(back!=null?h("button",{class:"btn",text:"Back",onclick:function(){sess.step=back;render();window.scrollTo(0,0)}}):h("span"));
   r.appendChild(h("button",{class:"btn primary",text:fl,onclick:function(){sess.step=fwd;render();window.scrollTo(0,0)}}));body.appendChild(r)}
@@ -359,6 +384,96 @@ function stepWarm(body,s){
       if(done===sess.warm.length)fin.disabled=false},false)]);body.appendChild(c)});
   var fin=h("button",{class:"btn primary",text:"Start the lesson",disabled:true,onclick:function(){sess.step=1;render();window.scrollTo(0,0)}});
   var r=h("div",{class:"row",style:"justify-content:flex-end"},[h("button",{class:"btn ghost",text:"Skip",onclick:function(){sess.step=1;render();window.scrollTo(0,0)}}),fin]);body.appendChild(r)}
+
+/* ---------- listening sessions (language courses) ---------- */
+var LSTEPS=[["Warm-up","2 min"],["Listen & write","12 min"],["Quiz","3 min"],["Wrap-up","3 min"]];
+var DVK="twenty-voice-de";
+function lv(){var all=TTS.ok?(speechSynthesis.getVoices()||[]):[];var lang=(C&&C.lang)||"de";return all.filter(function(v){return v.lang.toLowerCase().indexOf(lang)===0})}
+function lvoice(){var vs=lv(),want="";try{want=localStorage.getItem(DVK)||""}catch(e){}
+  for(var i=0;i<vs.length;i++)if(vs[i].name===want)return vs[i];
+  for(var j=0;j<vs.length;j++)if(/google|natural|online/i.test(vs[j].name))return vs[j];return vs[0]||null}
+var LP={tok:0};
+function lsay(lines,rate,onLine,onEnd){ttsStop(false);if(LP.reset){var rf=LP.reset;LP.reset=null;rf()}LP.reset=onEnd||null;LP.tok++;var t=LP.tok;try{speechSynthesis.cancel()}catch(e){}var i=0;
+  function next(){if(t!==LP.tok)return;if(i>=lines.length){onLine&&onLine(-1);if(LP.reset===onEnd)LP.reset=null;onEnd&&onEnd();return}
+    onLine&&onLine(i);var u=new SpeechSynthesisUtterance(lines[i]);var v=lvoice();if(v){u.voice=v;u.lang=v.lang}else u.lang=(C&&C.langTag)||"de-DE";u.rate=rate;
+    u.onend=function(){if(t!==LP.tok)return;i++;setTimeout(next,lines.length>1?450:0)};u.onerror=function(e){if(t!==LP.tok)return;if(e&&(e.error==="interrupted"||e.error==="canceled"))return;i++;next()};
+    speechSynthesis.speak(u)}
+  setTimeout(next,80);return function(){LP.tok++;try{speechSynthesis.cancel()}catch(e){}onLine&&onLine(-1);if(LP.reset===onEnd)LP.reset=null}}
+function lstop(){LP.tok++;LP.reset=null;if(TTS.ok)try{speechSynthesis.cancel()}catch(e){}}
+function lnorm(w){return w.toLowerCase().replace(/[„“”"'‚‘’«»().,!?;:–—…-]/g,"").replace(/ä/g,"ae").replace(/ö/g,"oe").replace(/ü/g,"ue").replace(/ß/g,"ss")}
+function ltok(s){return s.split(/\s+/).filter(function(w){return lnorm(w)})}
+function lcheck(exp,typed){var A=ltok(exp),B=ltok(typed),a=A.map(lnorm),b=B.map(lnorm),n=a.length,m=b.length,L=[];
+  for(var i=0;i<=n;i++){L.push(new Array(m+1).fill(0))}
+  for(i=n-1;i>=0;i--)for(var j=m-1;j>=0;j--)L[i][j]=a[i]===b[j]?L[i+1][j+1]+1:Math.max(L[i+1][j],L[i][j+1]);
+  var okA={},used={};i=0;j=0;while(i<n&&j<m){if(a[i]===b[j]){okA[i]=1;used[j]=1;i++;j++}else if(L[i+1][j]>=L[i][j+1])i++;else j++}
+  return {A:A,B:B,okA:okA,used:used,hit:Object.keys(okA).length,n:n}}
+function lrate(){var r=1;try{r=parseFloat(localStorage.getItem("twenty-lrate"))||0.9}catch(e){r=0.9}return r}
+function stepListen(body,s){lstop();sess.dict=sess.dict||{};sess.chk=sess.chk||{};
+  var wrap=h("div",{class:"lx"});body.appendChild(wrap);
+  var DE=s.lines.map(function(l){return l.de});
+  if(!TTS.ok||!lv().length){wrap.appendChild(h("section",{class:"card"},[h("div",{class:"eyebrow",text:"No German voice found"}),
+    h("p",{text:TTS.ok?"This browser has no German voice installed, so it cannot read the German aloud. In Chrome on a computer, the built-in “Google Deutsch” voice usually works. On Windows you can add German under Settings → Time & language → Speech. On a phone, add German as a text-to-speech language in your settings, then reload this page.":"Reading aloud is not available in this browser. You can still use the written exercises below."})]))}
+  /* voice + speed */
+  var vs=lv();var ctl=h("div",{class:"ctl"});
+  var rsel=h("select",{"aria-label":"Speed"});[[0.6,"Very slow"],[0.75,"Slow"],[0.9,"Natural"],[1,"Normal"],[1.1,"Fast"]].forEach(function(r){rsel.appendChild(h("option",{value:r[0],text:r[1]}))});
+  rsel.value=String(lrate());rsel.addEventListener("change",function(){try{localStorage.setItem("twenty-lrate",rsel.value)}catch(e){}});
+  ctl.appendChild(h("span",{class:"note",text:"Speed"}));ctl.appendChild(rsel);
+  if(vs.length>1){var vsel=h("select",{"aria-label":"German voice"});vs.forEach(function(v){vsel.appendChild(h("option",{value:v.name,text:v.name}))});var cv=lvoice();if(cv)vsel.value=cv.name;
+    vsel.addEventListener("change",function(){try{localStorage.setItem(DVK,vsel.value)}catch(e){}});ctl.appendChild(h("span",{class:"note",text:"Voice"}));ctl.appendChild(vsel)}
+  function R(){return parseFloat(rsel.value)||0.9}
+  /* 1 listen first */
+  var c1=h("section",{class:"card"},[h("div",{class:"eyebrow",text:"Step 1"}),h("h3",{text:"Listen first, no text"}),
+    h("p",{class:"note",text:"Listen to the whole text once or twice. Don’t write yet: just catch what it’s about and any words you know."}),ctl]);
+  var p1=h("button",{class:"btn primary",text:"▶ Play the whole text"});var stop1=null;
+  p1.addEventListener("click",function(){if(stop1){stop1();stop1=null;p1.textContent="▶ Play the whole text";return}p1.textContent="■ Stop";stop1=lsay(DE,R(),null,function(){stop1=null;p1.textContent="▶ Play the whole text"})});
+  c1.appendChild(h("div",{class:"ctl",style:"margin-top:10px"},[p1]));wrap.appendChild(c1);
+  /* 2 dictation */
+  var c2=h("section",{class:"card"},[h("div",{class:"eyebrow",text:"Step 2"}),h("h3",{text:"Write down what you hear"}),
+    h("p",{class:"note",text:"Play each line as often as you like, slow it down, and type what you hear. Then check it. Green words are right; underlined words are ones you missed or misspelt. Capitals don’t matter, and ae, oe, ue and ss count for ä, ö, ü and ß."})]);
+  var tot=h("p",{class:"note",style:"font-weight:600"});
+  function upTot(){var hit=0,n=0,k=0;s.lines.forEach(function(l,i){if(sess.chk[i]){k++;hit+=sess.chk[i].hit;n+=sess.chk[i].n}});tot.textContent=k?("Checked "+k+" of "+s.lines.length+" lines · "+hit+" of "+n+" words right ("+Math.round(hit/n*100)+"%)"):""}
+  s.lines.forEach(function(l,i){var row=h("div",{class:"dl"});
+    var ta=h("textarea",{lang:"de",spellcheck:"false",autocapitalize:"off",autocomplete:"off","aria-label":"Line "+(i+1)+": what you hear",placeholder:"Line "+(i+1)});ta.value=sess.dict[i]||"";
+    ta.addEventListener("input",function(){sess.dict[i]=ta.value});
+    var res=h("div",{class:"dres","aria-live":"polite"});
+    function show(rev){res.textContent="";var r=lcheck(l.de,ta.value);sess.chk[i]={hit:r.hit,n:r.n};upTot();
+      var de=h("div");r.A.forEach(function(w,k){de.appendChild(h("span",{class:r.okA[k]?"ok":"no",text:w}));de.appendChild(document.createTextNode(" "))});res.appendChild(de);
+      var extra=r.B.filter(function(w,k){return !r.used[k]});if(extra.length&&ta.value.trim())res.appendChild(h("div",{class:"note"},[document.createTextNode("Not in the text: "),h("span",{class:"ex",text:extra.join(" ")})]));
+      res.appendChild(h("div",{class:"en",text:l.en}))}
+    var ctl2=h("div",{class:"ctl"},[h("span",{class:"note",style:"font-weight:600;min-width:3.5em",text:"Line "+(i+1)}),
+      h("button",{class:"btn",text:"▶ Play",onclick:function(){lsay([l.de],R())}}),
+      h("button",{class:"btn",text:"🐢 Slower",onclick:function(){lsay([l.de],Math.max(0.5,R()-0.25))}})]);
+    var ck=h("div",{class:"ctl"},[h("button",{class:"btn primary",text:"Check",onclick:function(){show()}})]);
+    row.appendChild(ctl2);row.appendChild(ta);row.appendChild(ck);row.appendChild(res);c2.appendChild(row);
+    if(sess.chk[i])show()});
+  c2.appendChild(tot);upTot();wrap.appendChild(c2);
+  /* 3 side by side */
+  var pv=h("div",{class:"pv"},[h("div",{class:"hd",text:"Deutsch"}),h("div",{class:"hd",text:"English"})]);var deEls=[];
+  s.lines.forEach(function(l,i){var d=h("div",{class:"de",lang:"de",title:"Tap to hear"},[document.createTextNode(l.de)]);if(l.note)d.appendChild(h("span",{class:"add",text:l.note}));
+    d.addEventListener("click",function(){lsay([l.de],R(),function(k){deEls.forEach(function(e,x){e.classList.toggle("now",k===0&&x===i)})})});deEls.push(d);
+    pv.appendChild(d);pv.appendChild(h("div",{class:"enc",text:l.en}))});
+  var hideEn=h("button",{class:"btn",text:"Hide English",onclick:function(){pv.classList.toggle("hide-en");hideEn.textContent=pv.classList.contains("hide-en")?"Show English":"Hide English"}});
+  var hideDe=h("button",{class:"btn",text:"Hide German",onclick:function(){pv.classList.toggle("hide-de");hideDe.textContent=pv.classList.contains("hide-de")?"Show German":"Hide German"}});
+  var c3=h("section",{class:"card"},[h("div",{class:"eyebrow",text:"Step 3"}),h("h3",{text:"Read it: German and English side by side"}),
+    h("p",{class:"note",text:"Tap any German line to hear it. Hide one side to test yourself: hide the English and translate, or hide the German and say it in German."}),
+    h("div",{class:"ctl",style:"margin-bottom:10px"},[hideEn,hideDe]),pv]);
+  s.boxes.forEach(function(b){var bx=h("aside",{class:"box k-"+(BOXK[b.k]||"real"),style:"margin-top:12px"},[h("div",{class:"k",text:b.k}),h("h4",{text:b.t}),h("p",{text:b.x})]);c3.appendChild(bx)});
+  wrap.appendChild(c3);
+  /* 4 words */
+  var vw=h("div",{class:"vw"});s.terms.forEach(function(t){var w=t[0].replace(/\s*\(.*?\)\s*/g," ").trim();
+    vw.appendChild(h("div",{class:"ctl"},[h("button",{class:"btn ghost","aria-label":"Hear "+w,text:"▶",onclick:function(){lsay([w],R())}}),h("b",{lang:"de",text:t[0]}),h("span",{text:"— "+t[1]})]))});
+  wrap.appendChild(h("section",{class:"card"},[h("div",{class:"eyebrow",text:"Step 4"}),h("h3",{text:"Key words"}),h("p",{class:"note",text:"Tap ▶ to hear each word. Say it aloud after the voice."}),vw]));
+  /* 5 listen again */
+  var fl=h("div",{class:"fl",lang:"de",hidden:true});var flEls=s.lines.map(function(l){var e=h("span",{text:l.de});fl.appendChild(e);fl.appendChild(document.createTextNode(" "));return e});
+  var p5=h("button",{class:"btn primary",text:"▶ Play the whole text"});var stop5=null;
+  function mark(k){flEls.forEach(function(e,x){e.classList.toggle("now",x===k)})}
+  p5.addEventListener("click",function(){if(stop5){stop5();stop5=null;p5.textContent="▶ Play the whole text";return}p5.textContent="■ Stop";stop5=lsay(DE,R(),mark,function(){stop5=null;p5.textContent="▶ Play the whole text"})});
+  var showT=h("button",{class:"btn",text:"Follow the text",onclick:function(){fl.hidden=!fl.hidden;showT.textContent=fl.hidden?"Follow the text":"Hide the text"}});
+  wrap.appendChild(h("section",{class:"card"},[h("div",{class:"eyebrow",text:"Step 5"}),h("h3",{text:"Listen again"}),
+    h("p",{class:"note",text:"Listen to the whole text again without reading. You should now understand most of it. Try speaking along with it (shadowing) for extra practice."}),
+    h("div",{class:"ctl",style:"margin-bottom:10px"},[p5,showT]),fl]));
+  nav2(body,0,2,"On to the quiz")}
+
 function stepLesson(body,s){
   var cont=h("div",{class:"lesson","data-read":"1"});
   var nsec=s.lesson.length,nb=s.boxes.length,at={};
